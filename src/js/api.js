@@ -6,7 +6,7 @@ const BASE_URL = 'https://pixabay.com/api';
 
 axios.defaults.baseURL = BASE_URL;
 
-const fetchPhotos = async (query, page = 1) => {
+const fetchPhotos = async (query, page) => {
   let page = 1;
 
   const searchParams = new URLSearchParams({
