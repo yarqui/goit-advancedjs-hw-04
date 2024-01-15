@@ -8,22 +8,28 @@
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
-    <form class="search-form" id="search-form">
-      <input
-        type="text"
-        name="searchQuery"
-        autocomplete="off"
-        placeholder="Search images..."
-      />
-      <button type="submit" disabled>Search</button>
-    </form>
-
-    <span class="loader visually-hidden"></span>
-    <div class="gallery">
-      <!-- Image cards -->
+    <div class="search-form__wrapper">
+      <form class="search-form" id="search-form">
+        <input
+          class="search-form__input"
+          type="text"
+          name="searchQuery"
+          autocomplete="off"
+          placeholder="Search images..."
+        />
+        <button class="search-form__submit-button" type="submit" disabled>
+          Search
+        </button>
+      </form>
     </div>
 
+    <span class="loader visually-hidden"></span>
+    <ul class="gallery">
+      <!-- Image cards -->
+    </ul>
+
     <button type="button" class="load-more visually-hidden">Load more</button>
+    <button type="button" class="scroll-top-button visually-hidden">^</button>
 
     <script type="module" src="./main.js"></script>
   </body>

@@ -1,10 +1,10 @@
-// TODO: toTopBtn
-// TODO: add loader?
+// ✅ toTopBtn
+// ✅add loader?
 // ✅Submit handler
 // ✅Api fetch photos
 // ✅Render markup
-// styles
-// On image click
+// ✅styles
+// ✅On image click
 // ✅Load more
 // Infinity scroll
 
@@ -31,10 +31,31 @@ import 'izitoast/dist/css/iziToast.min.css';
 const refs = {
   form: document.querySelector('form#search-form'),
   input: document.querySelector('input[name="searchQuery"]'),
-  gallery: document.querySelector('div.gallery'),
+  gallery: document.querySelector('ul.gallery'),
   submitBtn: document.querySelector('button[type="submit"]'),
   loadMoreBtn: document.querySelector('button.load-more'),
+  toTopBtn: document.querySelector('.scroll-top-button'),
   loader: document.querySelector('span.loader'),
+};
+
+const lightbox = new SimpleLightbox('.photo-link');
+
+const goToNextResults = () => {
+  const { height: cardHeight } =
+    refs.gallery.firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+};
+
+const goToTop = () => {
+  console.log('go to top');
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  });
 };
 
 const clearMarkup = element => {
@@ -57,39 +78,47 @@ const convertArrToPhotosMarkup = arr => {
         } = el;
 
         return `
-    <li class="photo-card">
-        <img src="${largeImageURL}" alt="${tags}" loading="lazy" />
-        <div class="info">
-            <p class="info-item">
-                <b>Likes</b>
-                ${likes}
-            </p>
-            <p class="info-item">
-                <b>Views</b>
-                ${views}
-            </p>
-            <p class="info-item">
-                <b>Comments</b>
-                ${comments}
-            </p>
-            <p class="info-item">
-                <b>Downloads</b>
-                ${downloads}
-            </p>
-         </div>
+        <li class="photo-card">
+          <a class="photo-link" href="${largeImageURL}">
+            <img src="${webformatURL}" alt="${tags}" loading="lazy" width="305" height="200" />
+          </a>
+          <div class="info">
+              <p class="info-item">
+                  <b>Likes</b>
+                  ${likes}
+              </p>
+              <p class="info-item">
+                  <b>Views</b>
+                  ${views}
+              </p>
+              <p class="info-item">
+                  <b>Comments</b>
+                  ${comments}
+              </p>
+              <p class="info-item">
+                  <b>Downloads</b>
+                  ${downloads}
+              </p>
+          </div>
+          
     </li>`;
       })
       .join('')
   );
 };
 
-const renderFirstPhotosMarkup = photos => {
+const renderPhotosMarkup = photos => {
   const markup = convertArrToPhotosMarkup(photos);
-
-  // FIXME: ? DO WE NEED SEPARATE convertArr and this?
-  // // erase gallery before rendering a new one
-  // clearMarkup(refs.gallery);
   refs.gallery.insertAdjacentHTML('beforeend', markup);
+  lightbox.refresh();
+};
+
+const onScroll = () => {
+  if (window.scrollY >= 100) {
+    showElement(refs.toTopBtn);
+    return;
+  }
+  hideElement(refs.toTopBtn);
 };
 
 const onInput = e => {
@@ -138,7 +167,7 @@ const onSubmit = async e => {
       timeout: 1500,
     });
 
-    renderFirstPhotosMarkup(hits);
+    renderPhotosMarkup(hits);
 
     const page = getCurrentPageCount();
     const isEndOfResults = totalHits < page * per_page;
@@ -163,8 +192,8 @@ const onLoadMore = async () => {
 
   const { hits, totalHits } = data;
 
-  const markup = convertArrToPhotosMarkup(hits);
-  refs.gallery.insertAdjacentHTML('beforeend', markup);
+  renderPhotosMarkup(hits);
+  goToNextResults();
 
   const page = getCurrentPageCount();
   const isEndOfResults = totalHits < page * per_page;
@@ -183,6 +212,9 @@ const onLoadMore = async () => {
   showElement(refs.loadMoreBtn);
 };
 
+window.addEventListener('scroll', onScroll);
+
 refs.input.addEventListener('input', onInput);
 refs.form.addEventListener('submit', onSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMore);
+refs.toTopBtn.addEventListener('click', goToTop);
