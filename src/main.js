@@ -1,33 +1,21 @@
-// card template
-// <div class="photo-card">
-//     <img src="" alt="" loading="lazy" />
-//     <div class="info">
-//         <p class="info-item">
-//             <b>Likes</b>
-//         </p>
-//             <p class="info-item">
-//         <b>Views</b>
-//         </p>
-//         <p class="info-item">
-//             <b>Comments</b>
-//         </p>
-//         <p class="info-item">
-//             <b>Downloads</b>
-//         </p>
-//     </div>
-// </div>
-
 // ✅Submit handler
-// Api fetch photos
-// Render markup
+// ✅Api fetch photos
+// ✅Render markup
 // On image click
-// Load more
+// ✅Load more
 // Infinity scroll
 
 import iziToast from 'izitoast';
 import SimpleLightbox from 'simplelightbox';
 
-import { fetchPhotos } from './js/api';
+import { fetchPhotos, getCurrentQuery } from './js/api';
+import {
+  disableElement,
+  enableElement,
+  hideElement,
+  isNotEmpty,
+  showElement,
+} from './js/common';
 
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
@@ -36,25 +24,30 @@ const refs = {
   form: document.querySelector('form#search-form'),
   input: document.querySelector('input[name="searchQuery"]'),
   gallery: document.querySelector('div.gallery'),
+  submitBtn: document.querySelector('button[type="submit"]'),
   loadMoreBtn: document.querySelector('button.load-more'),
 };
 
-const renderPhotosMarkup = photos => {
-  console.log('photos:', photos);
+const clearMarkup = element => {
+  element.innerHTML = '';
+};
 
-  const markup = photos
-    .map(photo => {
-      const {
-        webformatURL,
-        largeImageURL,
-        tags,
-        likes,
-        views,
-        comments,
-        downloads,
-      } = photo;
+const convertArrToPhotosMarkup = arr => {
+  return (
+    isNotEmpty(arr) &&
+    arr
+      .map(el => {
+        const {
+          webformatURL,
+          largeImageURL,
+          tags,
+          likes,
+          views,
+          comments,
+          downloads,
+        } = el;
 
-      return `
+        return `
     <li class="photo-card">
         <img src="${largeImageURL}" alt="${tags}" loading="lazy" />
         <div class="info">
@@ -76,32 +69,43 @@ const renderPhotosMarkup = photos => {
             </p>
          </div>
     </li>`;
-    })
-    .join('');
+      })
+      .join('')
+  );
+};
 
+const renderPhotosMarkup = photos => {
+  console.log('photos:', photos);
+  const markup = convertArrToPhotosMarkup(photos);
   // erase gallery before rendering a new one
-  refs.gallery.innerHTML = '';
-
+  clearMarkup(refs.gallery);
   refs.gallery.insertAdjacentHTML('beforeend', markup);
+};
+
+const onInput = e => {
+  const inputValLength = e.target.value.length;
+  inputValLength >= 2
+    ? enableElement(refs.submitBtn)
+    : disableElement(refs.submitBtn);
 };
 
 const onSubmit = async e => {
   e.preventDefault();
 
+  const inputVal = e.target.elements['searchQuery'].value;
+
   // remove double whitespaces and trim input value
-  const normalizedInputVal = e.target.elements['searchQuery'].value
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalizedInputVal = inputVal.replace(/\s+/g, ' ').trim();
 
   refs.form.reset();
+  disableElement(refs.submitBtn);
 
   try {
     const { hits, totalHits, query } = await fetchPhotos(normalizedInputVal);
-    console.log('hits.length:', hits.length);
 
-    if (!totalHits) {
+    if (!isNotEmpty(hits)) {
       iziToast.warning({
-        message: `Sorry, there are no images matching "${query}". Please try again`,
+        message: `Sorry, there are no images matching "${query}". Please try another search`,
         position: 'topCenter',
         timeout: 4000,
       });
@@ -115,9 +119,35 @@ const onSubmit = async e => {
     });
 
     renderPhotosMarkup(hits);
+    showElement(refs.loadMoreBtn);
   } catch (error) {
     console.log(error);
   }
 };
 
+const onLoadMore = async () => {
+  const currentQuery = getCurrentQuery();
+  const { hits, isEndOfResults } = await fetchPhotos(currentQuery);
+  console.log('hits:', hits);
+
+  const markup = convertArrToPhotosMarkup(hits);
+  refs.gallery.insertAdjacentHTML('beforeend', markup);
+
+  if (isEndOfResults) {
+    setTimeout(() => {
+      iziToast.warning({
+        message: `We're sorry, but you've reached the end of search results.`,
+        position: 'topCenter',
+        timeout: 3500,
+      });
+    }, 1000);
+
+    hideElement(refs.loadMoreBtn);
+  }
+};
+
+// TODO: add event listener on input with cb, that checks whether input is empty. if it is empty iziToast about it
+// TODO: toTopBtn
+refs.input.addEventListener('input', onInput);
 refs.form.addEventListener('submit', onSubmit);
+refs.loadMoreBtn.addEventListener('click', onLoadMore);
