@@ -1,4 +1,5 @@
 // TODO: toTopBtn
+// TODO: add loader?
 // ✅Submit handler
 // ✅Api fetch photos
 // ✅Render markup
@@ -33,6 +34,7 @@ const refs = {
   gallery: document.querySelector('div.gallery'),
   submitBtn: document.querySelector('button[type="submit"]'),
   loadMoreBtn: document.querySelector('button.load-more'),
+  loader: document.querySelector('span.loader'),
 };
 
 const clearMarkup = element => {
@@ -84,8 +86,9 @@ const convertArrToPhotosMarkup = arr => {
 const renderFirstPhotosMarkup = photos => {
   const markup = convertArrToPhotosMarkup(photos);
 
-  // erase gallery before rendering a new one
-  clearMarkup(refs.gallery);
+  // FIXME: ? DO WE NEED SEPARATE convertArr and this?
+  // // erase gallery before rendering a new one
+  // clearMarkup(refs.gallery);
   refs.gallery.insertAdjacentHTML('beforeend', markup);
 };
 
@@ -106,9 +109,14 @@ const onSubmit = async e => {
 
   refs.form.reset();
   disableElement(refs.submitBtn);
+  hideElement(refs.loadMoreBtn);
+  showElement(refs.loader);
+  // erase gallery before fetching a new one
+  clearMarkup(refs.gallery);
 
   try {
     const data = await fetchPhotos(normalizedInputVal);
+    hideElement(refs.loader);
     //   there is no data if we encounter Error 429 "Too many requests"
     if (!data) {
       return;
@@ -144,7 +152,10 @@ const onSubmit = async e => {
 
 const onLoadMore = async () => {
   const currentQuery = getCurrentQuery();
+  hideElement(refs.loadMoreBtn);
+  showElement(refs.loader);
   const data = await fetchPhotos(currentQuery);
+  hideElement(refs.loader);
   //   there is no data if we encounter Error 429 "Too many requests"
   if (!data) {
     return;
@@ -167,7 +178,9 @@ const onLoadMore = async () => {
     }, 1000);
 
     hideElement(refs.loadMoreBtn);
+    return;
   }
+  showElement(refs.loadMoreBtn);
 };
 
 refs.input.addEventListener('input', onInput);
