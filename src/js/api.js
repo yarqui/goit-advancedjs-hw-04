@@ -21,21 +21,19 @@ const getCurrentQuery = () => {
   return query;
 };
 
-const fetchPhotos = async newQuery => {
-  console.log('newQuery:', newQuery);
-  console.log('query === newQuery:', query === newQuery);
-  console.log('page:', page);
+const getCurrentPageCount = () => {
+  return page;
+};
 
+const fetchPhotos = async newQuery => {
   if (newQuery && query !== newQuery) {
     resetPageCount();
     query = newQuery;
   } else {
     incrementPageCount();
   }
-  console.log('page:', page);
 
   const searchParams = new URLSearchParams({
-    // q: newQuery || '',
     q: newQuery || query,
     page,
     per_page,
@@ -47,8 +45,7 @@ const fetchPhotos = async newQuery => {
 
   try {
     const { data, status } = await axios.get(`/?${searchParams}`);
-    // TODO: REMOVE ALL HANDLING LOGIC TO THE OUTER CODE.
-    // ❗❗❗RETURN ONLY RES - THE PROMISE
+
     if (status === 429) {
       iziToast.warning({
         message: 'Too many requests. Limit exceeded. Try again later',
@@ -59,19 +56,20 @@ const fetchPhotos = async newQuery => {
       throw new Error('Too many requests. Limit exceeded. Try again later');
     }
 
-    const { totalHits, hits } = data;
-    console.log('hits.length:', hits.length);
+    // const { totalHits, hits } = data;
+    // console.log('hits.length:', hits.length);
 
-    const isEndOfResults = totalHits < page * per_page;
+    // const isEndOfResults = totalHits < page * per_page;
 
-    console.log('isEndOfResults:', isEndOfResults);
+    // console.log('isEndOfResults:', isEndOfResults);
 
-    //   add "query" & "isEndOfResults" to use it for later handling
-    return { ...data, query, isEndOfResults };
+    //   add "newQuery" & "isEndOfResults" to use it for later handling
+    return { ...data, newQuery };
+    // return { ...data, query, isEndOfResults };
   } catch (error) {
-    console.log(error);
-    throw error;
+    console.error(error);
+    // throw error;
   }
 };
 
-export { fetchPhotos, getCurrentQuery };
+export { fetchPhotos, getCurrentQuery, getCurrentPageCount, per_page };

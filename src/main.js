@@ -1,6 +1,8 @@
+// TODO: toTopBtn
 // ✅Submit handler
 // ✅Api fetch photos
 // ✅Render markup
+// styles
 // On image click
 // ✅Load more
 // Infinity scroll
@@ -8,7 +10,12 @@
 import iziToast from 'izitoast';
 import SimpleLightbox from 'simplelightbox';
 
-import { fetchPhotos, getCurrentQuery } from './js/api';
+import {
+  fetchPhotos,
+  getCurrentPageCount,
+  getCurrentQuery,
+  per_page,
+} from './js/api';
 import {
   disableElement,
   enableElement,
@@ -74,9 +81,9 @@ const convertArrToPhotosMarkup = arr => {
   );
 };
 
-const renderPhotosMarkup = photos => {
-  console.log('photos:', photos);
+const renderFirstPhotosMarkup = photos => {
   const markup = convertArrToPhotosMarkup(photos);
+
   // erase gallery before rendering a new one
   clearMarkup(refs.gallery);
   refs.gallery.insertAdjacentHTML('beforeend', markup);
@@ -101,11 +108,16 @@ const onSubmit = async e => {
   disableElement(refs.submitBtn);
 
   try {
-    const { hits, totalHits, query } = await fetchPhotos(normalizedInputVal);
+    const data = await fetchPhotos(normalizedInputVal);
+    //   there is no data if we encounter Error 429 "Too many requests"
+    if (!data) {
+      return;
+    }
 
+    const { hits, totalHits, newQuery } = data;
     if (!isNotEmpty(hits)) {
       iziToast.warning({
-        message: `Sorry, there are no images matching "${query}". Please try another search`,
+        message: `Sorry, there are no images matching "${newQuery}". Please try another search`,
         position: 'topCenter',
         timeout: 4000,
       });
@@ -118,8 +130,13 @@ const onSubmit = async e => {
       timeout: 1500,
     });
 
-    renderPhotosMarkup(hits);
-    showElement(refs.loadMoreBtn);
+    renderFirstPhotosMarkup(hits);
+
+    const page = getCurrentPageCount();
+    const isEndOfResults = totalHits < page * per_page;
+    isEndOfResults
+      ? hideElement(refs.loadMoreBtn)
+      : showElement(refs.loadMoreBtn);
   } catch (error) {
     console.log(error);
   }
@@ -127,12 +144,19 @@ const onSubmit = async e => {
 
 const onLoadMore = async () => {
   const currentQuery = getCurrentQuery();
-  const { hits, isEndOfResults } = await fetchPhotos(currentQuery);
-  console.log('hits:', hits);
+  const data = await fetchPhotos(currentQuery);
+  //   there is no data if we encounter Error 429 "Too many requests"
+  if (!data) {
+    return;
+  }
+
+  const { hits, totalHits } = data;
 
   const markup = convertArrToPhotosMarkup(hits);
   refs.gallery.insertAdjacentHTML('beforeend', markup);
 
+  const page = getCurrentPageCount();
+  const isEndOfResults = totalHits < page * per_page;
   if (isEndOfResults) {
     setTimeout(() => {
       iziToast.warning({
@@ -146,8 +170,6 @@ const onLoadMore = async () => {
   }
 };
 
-// TODO: add event listener on input with cb, that checks whether input is empty. if it is empty iziToast about it
-// TODO: toTopBtn
 refs.input.addEventListener('input', onInput);
 refs.form.addEventListener('submit', onSubmit);
 refs.loadMoreBtn.addEventListener('click', onLoadMore);
