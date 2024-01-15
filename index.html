@@ -7,27 +7,33 @@
     <title>Image gallery</title>
     
     <script type="module" crossorigin src="/goit-advancedjs-hw-04/commonHelpers.js"></script>
-    <link rel="modulepreload" crossorigin href="/goit-advancedjs-hw-04/assets/vendor-86d8eb39.js">
+    <link rel="modulepreload" crossorigin href="/goit-advancedjs-hw-04/assets/vendor-029e731f.js">
     <link rel="stylesheet" href="/goit-advancedjs-hw-04/assets/vendor-fd638ea2.css">
-    <link rel="stylesheet" href="/goit-advancedjs-hw-04/assets/index-043a7376.css">
+    <link rel="stylesheet" href="/goit-advancedjs-hw-04/assets/index-0a1d1cbc.css">
   </head>
   <body>
-    <form class="search-form" id="search-form">
-      <input
-        type="text"
-        name="searchQuery"
-        autocomplete="off"
-        placeholder="Search images..."
-      />
-      <button type="submit" disabled>Search</button>
-    </form>
-
-    <span class="loader visually-hidden"></span>
-    <div class="gallery">
-      <!-- Image cards -->
+    <div class="search-form__wrapper">
+      <form class="search-form" id="search-form">
+        <input
+          class="search-form__input"
+          type="text"
+          name="searchQuery"
+          autocomplete="off"
+          placeholder="Search images..."
+        />
+        <button class="search-form__submit-button" type="submit" disabled>
+          Search
+        </button>
+      </form>
     </div>
 
+    <span class="loader visually-hidden"></span>
+    <ul class="gallery">
+      <!-- Image cards -->
+    </ul>
+
     <button type="button" class="load-more visually-hidden">Load more</button>
+    <button type="button" class="scroll-top-button visually-hidden">^</button>
 
     
   </body>
