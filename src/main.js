@@ -1,15 +1,6 @@
-// ✅ toTopBtn
-// ✅add loader?
-// ✅Submit handler
-// ✅Api fetch photos
-// ✅Render markup
-// ✅styles
-// ✅On image click
-// ✅Load more
-// Infinity scroll
-
 import iziToast from 'izitoast';
 import SimpleLightbox from 'simplelightbox';
+import throttle from 'lodash.throttle';
 
 import {
   fetchPhotos,
@@ -28,6 +19,11 @@ import {
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
 
+const MODES = {
+  loadMoreButton: 'Load More Button',
+  infiniteScroll: 'Infinite Scroll',
+};
+
 const refs = {
   form: document.querySelector('form#search-form'),
   input: document.querySelector('input[name="searchQuery"]'),
@@ -39,6 +35,8 @@ const refs = {
 };
 
 const lightbox = new SimpleLightbox('.photo-link');
+let mode = null;
+let isEndOfResults = false;
 
 const goToNextResults = () => {
   const { height: cardHeight } =
@@ -51,7 +49,6 @@ const goToNextResults = () => {
 };
 
 const goToTop = () => {
-  console.log('go to top');
   window.scrollTo({
     top: 0,
     behavior: 'smooth',
@@ -113,13 +110,31 @@ const renderPhotosMarkup = photos => {
   lightbox.refresh();
 };
 
-const onScroll = () => {
+const onScroll = throttle(() => {
   if (window.scrollY >= 100) {
     showElement(refs.toTopBtn);
-    return;
+  } else {
+    hideElement(refs.toTopBtn);
   }
-  hideElement(refs.toTopBtn);
-};
+}, 500);
+
+const trackLastElement = throttle(() => {
+  const body = document.body;
+  const html = document.documentElement;
+  const totalHeight = Math.max(
+    body.scrollHeight,
+    body.offsetHeight,
+    html.clientHeight,
+    html.scrollHeight,
+    html.offsetHeight
+  );
+
+  const pixelsToBottom = totalHeight - window.innerHeight - window.scrollY;
+
+  if (pixelsToBottom < 300) {
+    onLoadMore();
+  }
+}, 500);
 
 const onInput = e => {
   const inputValLength = e.target.value.length;
@@ -138,7 +153,8 @@ const onSubmit = async e => {
 
   refs.form.reset();
   disableElement(refs.submitBtn);
-  hideElement(refs.loadMoreBtn);
+
+  mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
   showElement(refs.loader);
   // erase gallery before fetching a new one
   clearMarkup(refs.gallery);
@@ -168,53 +184,107 @@ const onSubmit = async e => {
     });
 
     renderPhotosMarkup(hits);
+    window.addEventListener('scroll', onScroll);
 
-    const page = getCurrentPageCount();
-    const isEndOfResults = totalHits < page * per_page;
-    isEndOfResults
-      ? hideElement(refs.loadMoreBtn)
-      : showElement(refs.loadMoreBtn);
+    if (mode === MODES.loadMoreButton) {
+      const page = getCurrentPageCount();
+      isEndOfResults = totalHits < page * per_page;
+
+      if (!isEndOfResults) {
+        showElement(refs.loadMoreBtn);
+        refs.loadMoreBtn.addEventListener('click', onLoadMore);
+      } else {
+        hideElement(refs.loadMoreBtn);
+      }
+    } else {
+      window.addEventListener('scroll', trackLastElement);
+    }
   } catch (error) {
     console.log(error);
   }
 };
 
 const onLoadMore = async () => {
-  const currentQuery = getCurrentQuery();
-  hideElement(refs.loadMoreBtn);
+  mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
   showElement(refs.loader);
-  const data = await fetchPhotos(currentQuery);
-  hideElement(refs.loader);
-  //   there is no data if we encounter Error 429 "Too many requests"
-  if (!data) {
-    return;
+
+  try {
+    const currentQuery = getCurrentQuery();
+    const data = await fetchPhotos(currentQuery);
+    hideElement(refs.loader);
+    //   there is no data if we encounter Error 429 "Too many requests"
+    if (!data) {
+      return;
+    }
+
+    const { hits, totalHits } = data;
+
+    renderPhotosMarkup(hits);
+    goToNextResults();
+
+    const page = getCurrentPageCount();
+    isEndOfResults = totalHits < page * per_page;
+    if (isEndOfResults) {
+      window.removeEventListener('scroll', trackLastElement);
+      refs.loadMoreBtn.removeEventListener('click', onLoadMore);
+
+      setTimeout(() => {
+        iziToast.warning({
+          message: `We're sorry, but you've reached the end of search results.`,
+          position: 'topCenter',
+          timeout: 3500,
+        });
+      }, 1000);
+
+      mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
+      return;
+    }
+    mode === MODES.loadMoreButton && showElement(refs.loadMoreBtn);
+  } catch (error) {
+    console.log(error);
   }
-
-  const { hits, totalHits } = data;
-
-  renderPhotosMarkup(hits);
-  goToNextResults();
-
-  const page = getCurrentPageCount();
-  const isEndOfResults = totalHits < page * per_page;
-  if (isEndOfResults) {
-    setTimeout(() => {
-      iziToast.warning({
-        message: `We're sorry, but you've reached the end of search results.`,
-        position: 'topCenter',
-        timeout: 3500,
-      });
-    }, 1000);
-
-    hideElement(refs.loadMoreBtn);
-    return;
-  }
-  showElement(refs.loadMoreBtn);
 };
 
-window.addEventListener('scroll', onScroll);
+const chooseModeOnLoad = () => {
+  iziToast.question({
+    timeout: 20000,
+    close: false,
+    overlay: true,
+    displayMode: 'once',
+    id: 'question',
+    zindex: 999,
+    message: 'Which modes do you want to use?',
+    position: 'center',
+    buttons: [
+      [
+        `<button>${MODES.loadMoreButton}</button>`,
+        function (instance, toast) {
+          instance.hide(
+            { transitionOut: 'fadeOut' },
+            toast,
+            `${MODES.loadMoreButton}`
+          );
+        },
+      ],
+      [
+        `<button>${MODES.infiniteScroll}</button>`,
+        function (instance, toast) {
+          instance.hide(
+            { transitionOut: 'fadeOut' },
+            toast,
+            `${MODES.infiniteScroll}`
+          );
+        },
+      ],
+    ],
+    onClosed: function (instance, toast, closedBy) {
+      mode = `${closedBy}`;
+    },
+  });
+};
+
+chooseModeOnLoad();
 
 refs.input.addEventListener('input', onInput);
 refs.form.addEventListener('submit', onSubmit);
-refs.loadMoreBtn.addEventListener('click', onLoadMore);
 refs.toTopBtn.addEventListener('click', goToTop);

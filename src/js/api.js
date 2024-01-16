@@ -56,19 +56,9 @@ const fetchPhotos = async newQuery => {
       throw new Error('Too many requests. Limit exceeded. Try again later');
     }
 
-    // const { totalHits, hits } = data;
-    // console.log('hits.length:', hits.length);
-
-    // const isEndOfResults = totalHits < page * per_page;
-
-    // console.log('isEndOfResults:', isEndOfResults);
-
-    //   add "newQuery" & "isEndOfResults" to use it for later handling
     return { ...data, newQuery };
-    // return { ...data, query, isEndOfResults };
   } catch (error) {
     console.error(error);
-    // throw error;
   }
 };
 
