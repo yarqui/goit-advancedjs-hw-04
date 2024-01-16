@@ -278,7 +278,7 @@ const chooseModeOnLoad = () => {
       ],
     ],
     onClosed: function (instance, toast, closedBy) {
-      mode = `${closedBy}`;
+      mode = closedBy === 'timeout' ? `${MODES.loadMoreButton}` : `${closedBy}`;
     },
   });
 };
