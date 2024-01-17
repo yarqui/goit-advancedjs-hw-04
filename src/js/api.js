@@ -43,11 +43,7 @@ const fetchPhotos = async newQuery => {
     key: API_KEY,
   });
 
-  try {
-    return await axios.get(`/?${searchParams}`);
-  } catch (error) {
-    console.error(error);
-  }
+  return await axios.get(`/?${searchParams}`);
 };
 
 export { fetchPhotos, getCurrentQuery, getCurrentPageCount, per_page };
