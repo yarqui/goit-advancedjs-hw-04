@@ -44,19 +44,7 @@ const fetchPhotos = async newQuery => {
   });
 
   try {
-    const { data, status } = await axios.get(`/?${searchParams}`);
-
-    if (status === 429) {
-      iziToast.warning({
-        message: 'Too many requests. Limit exceeded. Try again later',
-        position: 'topCenter',
-        timeout: 8000,
-      });
-
-      throw new Error('Too many requests. Limit exceeded. Try again later');
-    }
-
-    return { ...data, newQuery };
+    return await axios.get(`/?${searchParams}`);
   } catch (error) {
     console.error(error);
   }

@@ -75,6 +75,8 @@
   border: 1px solid #808080;
 
   background-color: #faffe7;
+
+  transition: background-color 300ms ease-in-out;
 }
 
 .search-form__submit-button:hover,

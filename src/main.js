@@ -9,22 +9,26 @@ import {
   per_page,
 } from './js/api';
 import {
+  checkFetchStatus,
   disableElement,
   enableElement,
   hideElement,
   isNotEmpty,
   removeWhitespaces,
   showElement,
+  goToTop,
+  isEndOfResults,
 } from './js/common';
 
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
 
 // TODO:
-// move all logic of handling the request outside of API
-// tune styles of the image card
+// ✅move all logic of handling the request outside of API
+// ✅notification on first fetch, when there are less hits, than per_page
+// edit styles of the image card
 // edit styles of toTop button
-// notification on first fetch, when there are less hits, than per_page
+// ✅smooth transition on hover and focus
 
 const MODES = {
   loadMoreButton: 'Load More Button',
@@ -43,7 +47,7 @@ const refs = {
 
 const lightbox = new SimpleLightbox('.photo-link');
 let mode = null;
-let isEndOfResults = false;
+// let isEndOfResults = false;
 
 const goToNextResults = () => {
   const { height: cardHeight } =
@@ -51,13 +55,6 @@ const goToNextResults = () => {
 
   window.scrollBy({
     top: cardHeight * 2,
-    behavior: 'smooth',
-  });
-};
-
-const goToTop = () => {
-  window.scrollTo({
-    top: 0,
     behavior: 'smooth',
   });
 };
@@ -155,7 +152,6 @@ const onSubmit = async e => {
   e.preventDefault();
 
   const inputVal = e.target.elements['searchQuery'].value;
-
   // remove double whitespaces and trim input value
   const normalizedInputVal = removeWhitespaces(inputVal);
 
@@ -168,17 +164,19 @@ const onSubmit = async e => {
   clearMarkup(refs.gallery);
 
   try {
-    const data = await fetchPhotos(normalizedInputVal);
+    const { data, status } = await fetchPhotos(normalizedInputVal);
     hideElement(refs.loader);
+    checkFetchStatus(status);
     //   there is no data if we encounter Error 429 "Too many requests"
     if (!data) {
       return;
     }
 
-    const { hits, totalHits, newQuery } = data;
+    const { hits, totalHits } = data;
+    const currentQuery = getCurrentQuery();
     if (!isNotEmpty(hits)) {
       iziToast.warning({
-        message: `Sorry, there are no images matching "${newQuery}". Please try another search`,
+        message: `Sorry, there are no images matching "${currentQuery}". Please try another search`,
         position: 'topCenter',
         timeout: 4000,
       });
@@ -194,18 +192,36 @@ const onSubmit = async e => {
     renderPhotosMarkup(hits);
     window.addEventListener('scroll', onScroll);
 
-    if (mode === MODES.loadMoreButton) {
-      const page = getCurrentPageCount();
-      isEndOfResults = totalHits < page * per_page;
+    // LOGIC FOR INFINITE SCROLL
+    if (mode === MODES.infiniteScroll) {
+      if (isEndOfResults(totalHits)) {
+        window.removeEventListener('scroll', trackLastElement);
 
-      if (!isEndOfResults) {
+        iziToast.warning({
+          message: `You've reached the end of search results.`,
+          position: 'topCenter',
+          timeout: 2500,
+        });
+      } else {
+        window.addEventListener('scroll', trackLastElement);
+      }
+      return;
+    }
+
+    // LOGIC FOR LOAD MORE BUTTON
+    if (mode === MODES.loadMoreButton) {
+      if (isEndOfResults(totalHits)) {
+        hideElement(refs.loadMoreBtn);
+        refs.loadMoreBtn.removeEventListener('click', onLoadMore);
+        iziToast.warning({
+          message: `You've reached the end of search results.`,
+          position: 'topCenter',
+          timeout: 2500,
+        });
+      } else {
         showElement(refs.loadMoreBtn);
         refs.loadMoreBtn.addEventListener('click', onLoadMore);
-      } else {
-        hideElement(refs.loadMoreBtn);
       }
-    } else {
-      window.addEventListener('scroll', trackLastElement);
     }
   } catch (error) {
     console.log(error);
@@ -218,21 +234,19 @@ const onLoadMore = async () => {
 
   try {
     const currentQuery = getCurrentQuery();
-    const data = await fetchPhotos(currentQuery);
+    const { data, status } = await fetchPhotos(currentQuery);
     hideElement(refs.loader);
+    checkFetchStatus(status);
     //   there is no data if we encounter Error 429 "Too many requests"
     if (!data) {
       return;
     }
 
     const { hits, totalHits } = data;
-
     renderPhotosMarkup(hits);
     goToNextResults();
 
-    const page = getCurrentPageCount();
-    isEndOfResults = totalHits < page * per_page;
-    if (isEndOfResults) {
+    if (isEndOfResults(totalHits)) {
       window.removeEventListener('scroll', trackLastElement);
       refs.loadMoreBtn.removeEventListener('click', onLoadMore);
 
