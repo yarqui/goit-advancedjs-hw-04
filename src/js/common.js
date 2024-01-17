@@ -24,4 +24,13 @@ const disableElement = el => {
 
 const isNotEmpty = arr => Array.isArray(arr) && arr.length > 0;
 
-export { showElement, hideElement, isNotEmpty, enableElement, disableElement };
+const removeWhitespaces = str => str.replace(/\s+/g, ' ').trim();
+
+export {
+  showElement,
+  hideElement,
+  isNotEmpty,
+  enableElement,
+  disableElement,
+  removeWhitespaces,
+};

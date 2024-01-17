@@ -13,11 +13,18 @@ import {
   enableElement,
   hideElement,
   isNotEmpty,
+  removeWhitespaces,
   showElement,
 } from './js/common';
 
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
+
+// TODO:
+// move all logic of handling the request outside of API
+// tune styles of the image card
+// edit styles of toTop button
+// notification on first fetch, when there are less hits, than per_page
 
 const MODES = {
   loadMoreButton: 'Load More Button',
@@ -137,8 +144,9 @@ const trackLastElement = throttle(() => {
 }, 500);
 
 const onInput = e => {
-  const inputValLength = e.target.value.length;
-  inputValLength >= 2
+  const normalizedInputVal = removeWhitespaces(e.target.value);
+
+  normalizedInputVal && normalizedInputVal.length >= 2
     ? enableElement(refs.submitBtn)
     : disableElement(refs.submitBtn);
 };
@@ -149,11 +157,11 @@ const onSubmit = async e => {
   const inputVal = e.target.elements['searchQuery'].value;
 
   // remove double whitespaces and trim input value
-  const normalizedInputVal = inputVal.replace(/\s+/g, ' ').trim();
+  const normalizedInputVal = removeWhitespaces(inputVal);
 
   refs.form.reset();
-  disableElement(refs.submitBtn);
 
+  disableElement(refs.submitBtn);
   mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
   showElement(refs.loader);
   // erase gallery before fetching a new one
