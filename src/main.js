@@ -23,13 +23,6 @@ import {
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
 
-// TODO:
-// ✅move all logic of handling the request outside of API
-// ✅notification on first fetch, when there are less hits, than per_page
-// edit styles of the image card
-// edit styles of toTop button
-// ✅smooth transition on hover and focus
-
 const MODES = {
   loadMoreButton: 'Load More Button',
   infiniteScroll: 'Infinite Scroll',
@@ -47,7 +40,6 @@ const refs = {
 
 const lightbox = new SimpleLightbox('.photo-link');
 let mode = null;
-// let isEndOfResults = false;
 
 const goToNextResults = () => {
   const { height: cardHeight } =

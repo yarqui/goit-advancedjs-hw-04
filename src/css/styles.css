@@ -5,8 +5,6 @@
   |============================
 */
 @import url('./reset.css');
-@import url('./vite-promo.css');
-@import url('./header.css');
 
 :root {
   font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
@@ -52,10 +50,23 @@
   border: 1px solid grey;
 }
 
+.search-form__submit-button,
+.load-more,
+.scroll-top-button {
+  padding: 10px;
+  border: 1px solid #808080;
+
+  background-color: #faffe7;
+
+  transition: background-color 300ms ease-in-out;
+}
+
 .search-form__input,
 .search-form__submit-button,
 .load-more {
-  border-radius: 10px;
+  padding-left: 32px;
+  padding-right: 32px;
+  border-radius: 30px;
   line-height: 1.5;
 }
 
@@ -68,17 +79,6 @@
   border-color: #e6e9db;
 }
 
-.search-form__submit-button,
-.load-more,
-.scroll-top-button {
-  padding: 10px;
-  border: 1px solid #808080;
-
-  background-color: #faffe7;
-
-  transition: background-color 300ms ease-in-out;
-}
-
 .search-form__submit-button:hover,
 .search-form__submit-button:focus,
 .load-more:hover,
@@ -89,25 +89,30 @@
   background-color: #f0ffba;
 }
 
-.load-more {
-  display: block;
-  margin: 10px auto;
-}
-
 .scroll-top-button {
+  display: flex;
   position: fixed;
   bottom: 30px;
   right: 30px;
 
-  width: 60px;
-  height: 60px;
-  padding: 15px;
-
-  font-weight: 700;
-  font-size: large;
-  border-radius: 30px;
-
+  border: 0;
+  border-radius: 40px;
   opacity: 80%;
+}
+
+.scroll-top-button:hover .scroll-top-icon,
+.scroll-top-button:focus .scroll-top-icon {
+  fill: #242424;
+}
+
+.scroll-top-icon {
+  fill: #696969;
+  transition: fill 300ms ease-in-out;
+}
+
+.load-more {
+  display: block;
+  margin: 10px auto;
 }
 
 .photo-card {
@@ -119,20 +124,26 @@
   justify-content: center;
   flex-direction: row;
   flex-wrap: wrap;
+  max-width: 1920px;
   margin-top: 30px;
-  padding-bottom: 30px;
+
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 30px;
   gap: 30px;
 }
 
 .photo-card {
   width: calc((100%) / 5);
+  max-width: 300px;
+  scale: 1;
   box-shadow: 0px 1px 1px rgba(0, 0, 0, 0.11), 0px 2px 2px rgba(0, 0, 0, 0.06),
     1px 2px 3px rgba(0, 0, 0, 0.11);
+  transition: scale 300ms ease-in-out;
 }
-
-.photo-img {
-  display: block;
-  max-width: 100%;
+.photo-card:hover,
+.photo-card:focus {
+  scale: 1.03;
 }
 
 .photo-link {
@@ -143,7 +154,7 @@
 
 .info {
   display: flex;
-  width: 100%;
+  max-width: 100%;
   padding: 5px;
   gap: 5px;
 }
