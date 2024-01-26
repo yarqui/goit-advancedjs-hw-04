@@ -2,18 +2,13 @@ import iziToast from 'izitoast';
 import SimpleLightbox from 'simplelightbox';
 import throttle from 'lodash.throttle';
 
-import {
-  fetchPhotos,
-  getCurrentPageCount,
-  getCurrentQuery,
-  per_page,
-} from './js/api';
+import { fetchPhotos, getCurrentQuery } from './js/api';
 import {
   checkFetchStatus,
   disableElement,
   enableElement,
   hideElement,
-  isNotEmpty,
+  isEmpty,
   removeWhitespaces,
   showElement,
   goToTop,
@@ -23,6 +18,7 @@ import {
 import 'simplelightbox/dist/simple-lightbox.min.css';
 import 'izitoast/dist/css/iziToast.min.css';
 
+// TODO: combine the logic in fetching and related operations. DRY❗❗❗
 const MODES = {
   loadMoreButton: 'Load More Button',
   infiniteScroll: 'Infinite Scroll',
@@ -36,6 +32,7 @@ const refs = {
   loadMoreBtn: document.querySelector('button.load-more'),
   toTopBtn: document.querySelector('.scroll-top-button'),
   loader: document.querySelector('span.loader'),
+  guard: document.querySelector('div.js-guard'),
 };
 
 const lightbox = new SimpleLightbox('.photo-link');
@@ -57,7 +54,7 @@ const clearMarkup = element => {
 
 const convertArrToPhotosMarkup = arr => {
   return (
-    isNotEmpty(arr) &&
+    !isEmpty(arr) &&
     arr
       .map(el => {
         const {
@@ -114,24 +111,6 @@ const onScroll = throttle(() => {
   }
 }, 500);
 
-const trackLastElement = throttle(() => {
-  const body = document.body;
-  const html = document.documentElement;
-  const totalHeight = Math.max(
-    body.scrollHeight,
-    body.offsetHeight,
-    html.clientHeight,
-    html.scrollHeight,
-    html.offsetHeight
-  );
-
-  const pixelsToBottom = totalHeight - window.innerHeight - window.scrollY;
-
-  if (pixelsToBottom < 300) {
-    onLoadMore();
-  }
-}, 500);
-
 const onInput = e => {
   const normalizedInputVal = removeWhitespaces(e.target.value);
 
@@ -151,11 +130,14 @@ const onSubmit = async e => {
 
   disableElement(refs.submitBtn);
   mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
-  showElement(refs.loader);
+
+  // remove observer from the previous fetch
+  mode === MODES.infiniteScroll && observer.unobserve(refs.guard);
   // erase gallery before fetching a new one
   clearMarkup(refs.gallery);
 
   try {
+    showElement(refs.loader);
     const { data, status } = await fetchPhotos(normalizedInputVal);
     hideElement(refs.loader);
     checkFetchStatus(status);
@@ -166,7 +148,7 @@ const onSubmit = async e => {
 
     const { hits, totalHits } = data;
     const currentQuery = getCurrentQuery();
-    if (!isNotEmpty(hits)) {
+    if (isEmpty(hits)) {
       iziToast.warning({
         message: `Sorry, there are no images matching "${currentQuery}". Please try another search`,
         position: 'topCenter',
@@ -180,22 +162,19 @@ const onSubmit = async e => {
       position: 'topCenter',
       timeout: 1500,
     });
-
     renderPhotosMarkup(hits);
     window.addEventListener('scroll', onScroll);
 
     // LOGIC FOR INFINITE SCROLL
     if (mode === MODES.infiniteScroll) {
       if (isEndOfResults(totalHits)) {
-        window.removeEventListener('scroll', trackLastElement);
-
         iziToast.warning({
           message: `You've reached the end of search results.`,
           position: 'topCenter',
           timeout: 2500,
         });
       } else {
-        window.addEventListener('scroll', trackLastElement);
+        observer.observe(refs.guard);
       }
       return;
     }
@@ -221,10 +200,10 @@ const onSubmit = async e => {
 };
 
 const onLoadMore = async () => {
-  mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
-  showElement(refs.loader);
+  hideElement(refs.loadMoreBtn);
 
   try {
+    showElement(refs.loader);
     const currentQuery = getCurrentQuery();
     const { data, status } = await fetchPhotos(currentQuery);
     hideElement(refs.loader);
@@ -239,7 +218,6 @@ const onLoadMore = async () => {
     goToNextResults();
 
     if (isEndOfResults(totalHits)) {
-      window.removeEventListener('scroll', trackLastElement);
       refs.loadMoreBtn.removeEventListener('click', onLoadMore);
 
       setTimeout(() => {
@@ -250,10 +228,41 @@ const onLoadMore = async () => {
         });
       }, 1000);
 
-      mode === MODES.loadMoreButton && hideElement(refs.loadMoreBtn);
+      hideElement(refs.loadMoreBtn);
       return;
     }
-    mode === MODES.loadMoreButton && showElement(refs.loadMoreBtn);
+    showElement(refs.loadMoreBtn);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const onInfiniteScrollLoad = async () => {
+  try {
+    showElement(refs.loader);
+    const currentQuery = getCurrentQuery();
+    const { data, status } = await fetchPhotos(currentQuery);
+    hideElement(refs.loader);
+    checkFetchStatus(status);
+    //   there is no data if we encounter Error 429 "Too many requests"
+    if (!data) {
+      return;
+    }
+
+    const { hits, totalHits } = data;
+    renderPhotosMarkup(hits);
+
+    if (isEndOfResults(totalHits)) {
+      observer.unobserve(refs.guard);
+
+      setTimeout(() => {
+        iziToast.warning({
+          message: `We're sorry, but you've reached the end of search results.`,
+          position: 'topCenter',
+          timeout: 3500,
+        });
+      }, 1000);
+    }
   } catch (error) {
     console.log(error);
   }
@@ -298,6 +307,15 @@ const chooseModeOnLoad = () => {
 };
 
 chooseModeOnLoad();
+
+const observerOpts = { rootMargin: '300px' };
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      onInfiniteScrollLoad();
+    }
+  });
+}, observerOpts);
 
 refs.input.addEventListener('input', onInput);
 refs.form.addEventListener('submit', onSubmit);

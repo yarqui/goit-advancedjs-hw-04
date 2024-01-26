@@ -25,7 +25,7 @@ const disableElement = el => {
   el.setAttribute(ATTRIBUTES.disabled, '');
 };
 
-const isNotEmpty = arr => Array.isArray(arr) && arr.length > 0;
+const isEmpty = arr => Array.isArray(arr) && arr.length === 0;
 
 const removeWhitespaces = str => str.replace(/\s+/g, ' ').trim();
 
@@ -56,7 +56,7 @@ const isEndOfResults = totalHits => {
 export {
   showElement,
   hideElement,
-  isNotEmpty,
+  isEmpty,
   enableElement,
   disableElement,
   removeWhitespaces,
